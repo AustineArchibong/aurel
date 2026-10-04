@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>AUREL Admin</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .wrap{max-width:900px;margin:0 auto;padding:20px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:16px 0}
+  .stats div{border:1px solid var(--line);border-radius:12px;padding:12px;background:#12120f}
+  .stats b{display:block;font-size:1.4rem}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .tabs button{width:auto;margin:0;padding:8px 14px;background:transparent;color:var(--fg);border:1px solid var(--line);font-size:.85rem}
+  .tabs button.on{background:var(--fg);color:#000}
+  .o{border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;background:#12120f}
+  .o .top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .o p{margin:3px 0;font-size:.9rem}
+  select{padding:10px;border-radius:10px;background:#151512;color:var(--fg);border:1px solid #33332d;font:inherit}
+  .s-pending{color:#e0c36a}.s-confirmed{color:#b6d96a}.s-in_transit{color:#6ab8e0}.s-delivered{color:#8fe08f}.s-cancelled{color:#e08a8a}
+  a.call{color:#b6d96a}
+</style>
+</head>
+<body>
+<header><span class="logo sm">AUREL ADMIN</span><button id="out" hidden style="width:auto;margin:0;padding:6px 14px;font-size:.8rem">Log out</button></header>
+<div class="wrap">
+  <form id="login" style="max-width:360px;margin:40px auto">
+    <h2>Admin login</h2>
+    <label>Email<input id="email" type="email" required></label>
+    <label>Password<input id="pass" type="password" required></label>
+    <button type="submit">Log in</button>
+    <p class="note" id="err" hidden></p>
+  </form>
+  <div id="panel" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="tabs" id="tabs"></div>
+    <div id="list"></div>
+  </div>
+</div>
+<script src="db.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const naira = n => "₦" + Number(n).toLocaleString();
+const LABEL = { pending: "Pending", confirmed: "Confirmed", in_transit: "In transit", delivered: "Delivered", cancelled: "Cancelled" };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let token = null, orders = [], filter = "all";
+try { token = sessionStorage.getItem("aurel_admin"); } catch (_) {}
+
+function showErr(m) { $("err").textContent = m; $("err").hidden = false; }
+function logout() { token = null; try { sessionStorage.removeItem("aurel_admin"); } catch (_) {} $("panel").hidden = true; $("login").hidden = false; $("out").hidden = true; }
+
+$("login").onsubmit = async e => {
+  e.preventDefault(); $("err").hidden = true;
+  try {
+    const r = await db.call("/auth/v1/token?grant_type=password", { method: "POST", body: JSON.stringify({ email: $("email").value, password: $("pass").value }) });
+    token = r.access_token; try { sessionStorage.setItem("aurel_admin", token); } catch (_) {}
+    $("pass").value = ""; start();
+  } catch (e) { showErr("Login failed: " + e.message); }
+};
+$("out").onclick = logout;
+
+async function start() {
+  try {
+    const isAdmin = await db.rpc("is_admin", {}, token);
+    if (!isAdmin) { logout(); showErr("This account is not an admin."); return; }
+    $("login").hidden = true; $("panel").hidden = false; $("out").hidden = false;
+    await load(); setInterval(load, 20000);
+  } catch (e) { logout(); if (e.status !== 401) showErr(e.message); }
+}
+async function load() {
+  try {
+    orders = await db.call("/rest/v1/orders?select=*&order=created_at.desc", {}, token);
+    render();
+  } catch (e) { if (e.status === 401) logout(); }
+}
+function render() {
+  const live = orders.filter(o => o.status !== "cancelled");
+  const paid = orders.filter(o => ["confirmed", "in_transit", "delivered"].includes(o.status));
+  $("stats").innerHTML = `
+    <div><b>${orders.length}</b>orders</div>
+    <div><b>${live.reduce((a, o) => a + o.qty, 0)}</b>pieces reserved</div>
+    <div><b>${orders.filter(o => o.status === "pending").length}</b>awaiting payment</div>
+    <div><b>${naira(paid.reduce((a, o) => a + o.total, 0))}</b>confirmed revenue</div>`;
+  const keys = ["all", ...Object.keys(LABEL)];
+  $("tabs").innerHTML = keys.map(k => `<button class="${filter === k ? "on" : ""}" data-k="${k}">${k === "all" ? "All" : LABEL[k]} (${k === "all" ? orders.length : orders.filter(o => o.status === k).length})</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => { filter = b.dataset.k; render(); });
+  const shown = orders.filter(o => filter === "all" || o.status === filter);
+  $("list").innerHTML = shown.length ? shown.map(o => `
+    <div class="o">
+      <div class="top"><b>${esc(o.ref)}</b><span class="s-${o.status}">${LABEL[o.status]}</span></div>
+      <p>${esc(o.name)} · <a class="call" href="tel:${esc(o.phone)}">${esc(o.phone)}</a></p>
+      <p>${esc(o.address)}</p>
+      <p>Size ${o.size} · Qty ${o.qty} · <b>${naira(o.total)}</b></p>
+      <p style="color:var(--mute);font-size:.8rem">${new Date(o.created_at).toLocaleString()}</p>
+      <select data-id="${o.id}">${Object.entries(LABEL).map(([v, l]) => `<option value="${v}" ${o.status === v ? "selected" : ""}>${l}</option>`).join("")}</select>
+    </div>`).join("") : '<p class="muted">No orders here yet.</p>';
+  $("list").querySelectorAll("select").forEach(s => s.onchange = async () => {
+    if (s.value === "cancelled" && !confirm("Cancel this order? The pieces go back into the pool.")) { render(); return; }
+    try {
+      await db.call("/rest/v1/orders?id=eq." + s.dataset.id, { method: "PATCH", body: JSON.stringify({ status: s.value }), headers: { Prefer: "return=minimal" } }, token);
+      load();
+    } catch (e) { alert("Could not update: " + e.message); load(); }
+  });
+}
+if (token) start();
+</script>
+</body>
+</html>

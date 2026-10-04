@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Track your AUREL order</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .wrap{max-width:460px;margin:30px auto;padding:20px}
+  .steps{list-style:none;padding:0;margin:20px 0}
+  .steps li{position:relative;padding:0 0 22px 34px;color:var(--mute)}
+  .steps li::before{content:"";position:absolute;left:0;top:2px;width:16px;height:16px;border-radius:50%;border:2px solid #444;background:var(--bg)}
+  .steps li::after{content:"";position:absolute;left:7px;top:20px;bottom:0;width:2px;background:#333}
+  .steps li:last-child::after{display:none}
+  .steps li.done{color:var(--fg)}
+  .steps li.done::before{background:#a5c452;border-color:#a5c452}
+  .steps li.now::before{animation:pulse2 1.5s infinite}
+  @keyframes pulse2{0%{box-shadow:0 0 0 0 #a5c452aa}100%{box-shadow:0 0 0 12px transparent}}
+  .box{border:1px solid var(--line);border-radius:14px;padding:16px;background:#12120f;margin-top:16px}
+  .box p{margin:4px 0}
+</style>
+</head>
+<body>
+<header><a href="index.html" class="logo sm" style="color:inherit;text-decoration:none">AUREL</a><span class="muted">Order tracking</span></header>
+<div class="wrap">
+  <h1>Track your order</h1>
+  <p class="muted">Enter the order ref you were given and the phone number you ordered with.</p>
+  <form id="f">
+    <label>Order ref<input id="ref" placeholder="AUREL-XXXXX" required></label>
+    <label>Phone number<input id="phone" type="tel" required></label>
+    <button type="submit" id="go">Track</button>
+  </form>
+  <p class="note" id="err" hidden></p>
+  <div id="result" hidden>
+    <div class="box" id="info"></div>
+    <ul class="steps" id="steps"></ul>
+    <p class="muted" id="msg"></p>
+  </div>
+</div>
+<a class="wa" id="wa" href="https://wa.me/2347032404818?text=Hi%20AUREL%2C%20I%20need%20help%20with%20my%20order." target="_blank" rel="noopener">💬 Need help? WhatsApp us</a>
+<script src="db.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const naira = n => "₦" + n.toLocaleString();
+const STEPS = [
+  ["pending", "Order received", "Waiting for your payment to reach us."],
+  ["confirmed", "Payment confirmed", "We have your payment. Your piece goes into production when the drop closes."],
+  ["in_transit", "In transit", "Your order is on its way. We'll confirm the delivery fee with you."],
+  ["delivered", "Delivered", "Enjoy your piece. No Aurel, No Vibe."]
+];
+let timer;
+async function track(ref, phone) {
+  $("err").hidden = true;
+  try {
+    const r = (await db.rpc("track_order", { p_ref: ref, p_phone: phone }))[0];
+    if (!r) { $("result").hidden = true; $("err").textContent = "We couldn't find that order. Check the ref and the phone number you used."; $("err").hidden = false; return; }
+    $("wa").href = "https://wa.me/2347032404818?text=" + encodeURIComponent("Hi AUREL, I need help with my order " + r.ref);
+    $("info").innerHTML = `<p><b>${r.ref}</b></p><p>Size ${r.size} · Qty ${r.qty}</p><p>Total ${naira(r.total)}</p>`;
+    const idx = STEPS.findIndex(s => s[0] === r.status);
+    if (r.status === "cancelled") {
+      $("steps").innerHTML = ""; $("msg").textContent = "This order was cancelled. If you think this is a mistake, contact AUREL.";
+    } else {
+      $("steps").innerHTML = STEPS.map((s, i) => `<li class="${i < idx ? "done" : i === idx ? "done now" : ""}">${s[1]}</li>`).join("");
+      $("msg").textContent = STEPS[idx][2];
+    }
+    $("result").hidden = false;
+    clearInterval(timer); timer = setInterval(() => track(ref, phone), 30000);   // refresh every 30s
+  } catch (e) { $("err").textContent = e.message; $("err").hidden = false; }
+}
+$("f").onsubmit = async e => {
+  e.preventDefault(); $("go").disabled = true; $("go").textContent = "Checking…";
+  await track($("ref").value, $("phone").value);
+  $("go").disabled = false; $("go").textContent = "Track";
+};
+// prefill from link / just-placed order
+const qs = new URLSearchParams(location.search);
+let saved = {}; try { saved = JSON.parse(sessionStorage.getItem("aurel_track") || "{}"); } catch (_) {}
+if (qs.get("ref")) $("ref").value = qs.get("ref");
+else if (saved.ref) $("ref").value = saved.ref;
+if (saved.phone && (!qs.get("ref") || qs.get("ref") === saved.ref)) { $("phone").value = saved.phone; track($("ref").value, saved.phone); }
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AUREL — Pre-order</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="intro"><div class="logo">AUREL</div><p>No Aurel, No Vibe</p></div>
+
+<header><span class="logo sm">AUREL</span><span><a href="track.html" class="hl">Track order</a> <span id="status" class="pill">…</span></span></header>
+
+<main>
+  <div class="top">
+  <section class="hero reveal">
+    <div class="stage" id="stage">
+      <div class="glow"></div><div class="specks" id="specks"></div>
+      <div class="card" id="card">
+        <div class="face front"><img src="front.png" alt="AUREL tee front" draggable="false"></div>
+        <div class="face back"><img src="back.png" alt="AUREL tee back" draggable="false"></div>
+      </div>
+    </div>
+    <p class="hint">Drag to spin · tap to flip</p>
+  </section>
+
+  <section class="info reveal">
+    <span class="pill green">DROP 001</span>
+    <h1>It's Never Luck,<br>It's Always God</h1>
+    <div class="price" id="price"></div>
+    <p class="muted">Oversized white tee. Camo back print. Made after the drop closes, so every piece is made for someone.</p>
+
+    <div class="count" id="count">
+      <div><b id="d">00</b><small>days</small></div>
+      <div><b id="h">00</b><small>hrs</small></div>
+      <div><b id="m">00</b><small>min</small></div>
+      <div><b id="s">00</b><small>sec</small></div>
+    </div>
+    <p class="muted" id="countLabel"></p>
+    <div class="bar"><i id="bar"></i></div>
+    <p class="muted" id="left"></p>
+
+    <form id="form" autocomplete="on">
+      <label>Size <a href="#" id="guide">Size guide</a></label>
+      <div class="sizes">
+        <label><input type="radio" name="size" value="S"><span>S</span></label>
+        <label><input type="radio" name="size" value="M" checked><span>M</span></label>
+        <label><input type="radio" name="size" value="L"><span>L</span></label>
+        <label><input type="radio" name="size" value="XL"><span>XL</span></label>
+        <label><input type="radio" name="size" value="XXL"><span>XXL</span></label>
+      </div>
+      <label>Quantity<input type="number" id="qty" min="1" max="5" value="1"></label>
+      <label>Full name<input id="name" required></label>
+      <label>Phone / WhatsApp<input id="phone" type="tel" required></label>
+      <label>Delivery address<textarea id="addr" rows="2" required></textarea></label>
+      <div class="total">Total: <b id="total"></b></div>
+      <p class="note">Pay for the shirt by bank transfer after you tap Pre-order. Delivery fee is separate: we'll confirm the cost on WhatsApp and you pay it then.</p>
+      <button type="submit" id="btn">Pre-order now</button>
+    </form>
+    <div id="closed" hidden>
+      <h2>Drop closed</h2>
+      <p class="muted">This drop has ended. Orders for the next piece open soon.</p>
+      <a class="btn" id="notify" target="_blank" rel="noopener">Notify me on WhatsApp</a>
+    </div>
+  </section>
+
+  </div>
+
+  <section class="faq reveal">
+    <h2>Good to know</h2>
+    <details><summary>When will I get my order?</summary><p id="faqEta"></p></details>
+    <details><summary>How does payment work?</summary><p>After you tap Pre-order you get our account details. Transfer the exact amount with your order ref as the narration. Your order is confirmed once we see the money, and you can follow its status on the Track order page. Delivery is paid separately after we confirm the cost.</p></details>
+    <details><summary>Can I exchange my size?</summary><p>Check the size guide before ordering. Message us within 48 hours of ordering if you need to change your size.</p></details>
+  </section>
+</main>
+
+<footer>© AUREL · No Aurel, No Vibe</footer>
+
+<div id="toast" hidden></div>
+<div id="pay" hidden>
+  <div class="sheet">
+    <h3>Complete your pre-order</h3>
+    <p class="muted">Order ref: <b id="ref"></b></p>
+    <div class="acct">
+      <small>Amount to transfer</small><b id="amt"></b>
+      <small>Bank</small><b id="bank"></b>
+      <small>Account number</small><b id="acctNo"></b>
+      <small>Account name</small><b id="acctName"></b>
+    </div>
+    <button type="button" id="copy">Copy account number</button>
+    <button type="button" id="sent">I've paid, track my order</button>
+    <p class="muted" style="margin-top:10px">Put your order ref as the transfer narration so we can match your payment. Your order is confirmed once we see the money. Save your ref: you need it, plus your phone number, to track your order.</p>
+    <button type="button" class="ghost" id="payX">Cancel</button>
+  </div>
+</div>
+<div id="modal" hidden>
+  <div class="sheet">
+    <h3>Size guide (inches)</h3>
+    <table>
+      <tr><th>Size</th><th>Chest</th><th>Length</th></tr>
+      <tr><td>S</td><td>22</td><td>27</td></tr>
+      <tr><td>M</td><td>23</td><td>28</td></tr>
+      <tr><td>L</td><td>24</td><td>29</td></tr>
+      <tr><td>XL</td><td>25</td><td>30</td></tr>
+      <tr><td>XXL</td><td>26</td><td>31</td></tr>
+    </table>
+    <p class="muted">Placeholder numbers. Replace them with your real measurements.</p>
+    <button id="x">Close</button>
+  </div>
+</div>
+<a class="wa" id="wa" href="https://wa.me/2347032404818?text=Hi%20AUREL%2C%20I%20need%20help%20with%20my%20order." target="_blank" rel="noopener">💬 Need help? WhatsApp us</a>
+<script src="db.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
