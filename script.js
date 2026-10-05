@@ -100,6 +100,24 @@ tick(); setInterval(tick, 1000);
 const updateTotal = () => $("total").textContent = naira(CONFIG.price * (+$("qty").value || 1));
 $("qty").oninput = updateTotal; updateTotal();
 
+// colour switcher: the shirt spins, flashes and swaps to the chosen colour
+let color = "white";
+const SRC = c => ({ f: c === "white" ? "front.png" : `front_${c}.png`, b: c === "white" ? "back.png" : `back_${c}.png` });
+["white", "black"].forEach(c => { const s = SRC(c); new Image().src = s.f; new Image().src = s.b; });   // preload
+document.querySelectorAll(".sw").forEach(btn => btn.onclick = () => {
+  const c = btn.dataset.c; if (c === color) return; color = c;
+  document.querySelectorAll(".sw").forEach(x => x.classList.toggle("on", x === btn));
+  $("colorName").textContent = c[0].toUpperCase() + c.slice(1);
+  const stage = $("stage"), imgs = document.querySelectorAll(".face img"), s = SRC(c);
+  stage.classList.remove("ring"); void stage.offsetWidth; stage.classList.add("ring");
+  base += 360; draw();                                            // one full spin
+  setTimeout(() => {
+    imgs.forEach(i => { i.classList.remove("flash"); void i.offsetWidth; i.classList.add("flash"); });
+    imgs[0].src = s.f; imgs[1].src = s.b;
+    card.style.setProperty("--f", `url(${s.f})`); card.style.setProperty("--b", `url(${s.b})`);
+  }, 450);
+});
+
 // order -> saved in database -> bank transfer sheet -> tracking page
 let order = null;
 const toast = m => { const t = $("toast"); t.textContent = m; t.hidden = false; setTimeout(() => t.hidden = true, 4000); };
@@ -112,9 +130,10 @@ $("form").onsubmit = async e => {
   try {
     const r = (await db.rpc("create_order", {
       p_drop: "drop-001", p_name: $("name").value, p_phone: $("phone").value,
-      p_address: $("addr").value, p_size: size, p_qty: qty
+      p_address: $("addr").value, p_size: size, p_qty: qty, p_color: color
     }))[0];
     order = { ref: r.ref, total: r.total, phone: $("phone").value.trim() };
+    $("sum").textContent = `${color[0].toUpperCase() + color.slice(1)} tee · Size ${size} · Qty ${qty}`;
     $("ref").textContent = r.ref; $("amt").textContent = naira(r.total);
     $("bank").textContent = CONFIG.bank; $("acctNo").textContent = CONFIG.acctNo; $("acctName").textContent = CONFIG.acctName;
     try { sessionStorage.setItem("aurel_track", JSON.stringify({ ref: r.ref, phone: order.phone })); } catch (_) {}

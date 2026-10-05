@@ -55,7 +55,7 @@ async function track(ref, phone) {
     const r = (await db.rpc("track_order", { p_ref: ref, p_phone: phone }))[0];
     if (!r) { $("result").hidden = true; $("err").textContent = "We couldn't find that order. Check the ref and the phone number you used."; $("err").hidden = false; return; }
     $("wa").href = "https://wa.me/2347032404818?text=" + encodeURIComponent("Hi AUREL, I need help with my order " + r.ref);
-    $("info").innerHTML = `<p><b>${r.ref}</b></p><p>Size ${r.size} · Qty ${r.qty}</p><p>Total ${naira(r.total)}</p>`;
+    $("info").innerHTML = `<p><b>${r.ref}</b></p><p>${r.color[0].toUpperCase() + r.color.slice(1)} · Size ${r.size} · Qty ${r.qty}</p><p>Total ${naira(r.total)}</p>`;
     const idx = STEPS.findIndex(s => s[0] === r.status);
     if (r.status === "cancelled") {
       $("steps").innerHTML = ""; $("msg").textContent = "This order was cancelled. If you think this is a mistake, contact AUREL.";

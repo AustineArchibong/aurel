@@ -41,6 +41,11 @@
     <p class="muted" id="left"></p>
 
     <form id="form" autocomplete="on">
+      <label>Colour: <b id="colorName" style="color:var(--fg)">White</b></label>
+      <div class="swatches">
+        <button type="button" class="sw on" data-c="white" style="--c:#f4f2ec" aria-label="White"></button>
+        <button type="button" class="sw" data-c="black" style="--c:#0a0a0a" aria-label="Black"></button>
+      </div>
       <label>Size <a href="#" id="guide">Size guide</a></label>
       <div class="sizes">
         <label><input type="radio" name="size" value="S"><span>S</span></label>
@@ -81,6 +86,7 @@
   <div class="sheet">
     <h3>Complete your pre-order</h3>
     <p class="muted">Order ref: <b id="ref"></b></p>
+    <p class="muted" id="sum"></p>
     <div class="acct">
       <small>Amount to transfer</small><b id="amt"></b>
       <small>Bank</small><b id="bank"></b>

@@ -80,6 +80,7 @@ function render() {
   $("stats").innerHTML = `
     <div><b>${orders.length}</b>orders</div>
     <div><b>${live.reduce((a, o) => a + o.qty, 0)}</b>pieces reserved</div>
+    <div><b>${live.filter(o => o.color === "black").reduce((a, o) => a + o.qty, 0)} / ${live.filter(o => o.color === "white").reduce((a, o) => a + o.qty, 0)}</b>black / white</div>
     <div><b>${orders.filter(o => o.status === "pending").length}</b>awaiting payment</div>
     <div><b>${naira(paid.reduce((a, o) => a + o.total, 0))}</b>confirmed revenue</div>`;
   const keys = ["all", ...Object.keys(LABEL)];
@@ -91,7 +92,7 @@ function render() {
       <div class="top"><b>${esc(o.ref)}</b><span class="s-${o.status}">${LABEL[o.status]}</span></div>
       <p>${esc(o.name)} · <a class="call" href="tel:${esc(o.phone)}">${esc(o.phone)}</a></p>
       <p>${esc(o.address)}</p>
-      <p>Size ${o.size} · Qty ${o.qty} · <b>${naira(o.total)}</b></p>
+      <p>${esc(o.color)} · Size ${o.size} · Qty ${o.qty} · <b>${naira(o.total)}</b></p>
       <p style="color:var(--mute);font-size:.8rem">${new Date(o.created_at).toLocaleString()}</p>
       <select data-id="${o.id}">${Object.entries(LABEL).map(([v, l]) => `<option value="${v}" ${o.status === v ? "selected" : ""}>${l}</option>`).join("")}</select>
     </div>`).join("") : '<p class="muted">No orders here yet.</p>';
