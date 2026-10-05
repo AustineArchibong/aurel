@@ -34,6 +34,7 @@
   </form>
   <div id="panel" hidden>
     <div class="stats" id="stats"></div>
+    <div id="mfr"></div>
     <div class="tabs" id="tabs"></div>
     <div id="list"></div>
   </div>
@@ -74,7 +75,50 @@ async function load() {
     render();
   } catch (e) { if (e.status === 401) logout(); }
 }
+// ---------- manufacturer list ----------
+let incl = false;
+const SIZES = ["S", "M", "L", "XL", "XXL"];
+const mfrRows = () => orders.filter(o => incl ? ["confirmed", "in_transit", "delivered"].includes(o.status) : o.status === "confirmed");
+const csvCell = v => {                                    // quote cells and stop spreadsheet formula tricks
+  let t = String(v ?? "");
+  if (/^[=@\t\r]|^[+\-](?!\d)/.test(t)) t = "'" + t;
+  return '"' + t.replace(/"/g, '""') + '"';
+};
+const fmtPhone = p => { const d = String(p).replace(/\D/g, ""); return d.length === 11 ? `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}` : String(p).trim(); };
+function download(name, rows) {
+  const blob = new Blob(["\ufeff" + rows.map(r => r.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function summary(rows) {
+  return ["black", "white"].map(c => {
+    const per = SIZES.map(z => rows.filter(o => o.color === c && o.size === z).reduce((a, o) => a + o.qty, 0));
+    return [c[0].toUpperCase() + c.slice(1), ...per, per.reduce((a, b) => a + b, 0)];
+  });
+}
+function renderMfr() {
+  const rows = mfrRows(), sum = summary(rows), pieces = rows.reduce((a, o) => a + o.qty, 0);
+  const tot = SIZES.map((_, i) => sum.reduce((a, r) => a + r[i + 1], 0));
+  $("mfr").innerHTML = `<div class="o">
+    <div class="top"><b>Manufacturer list</b><span class="muted">${rows.length} orders · ${pieces} pieces</span></div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="incl" ${incl ? "checked" : ""} style="width:auto;margin:0;padding:0"> Also include in transit &amp; delivered</label>
+    <div style="overflow-x:auto"><table><tr><th></th>${SIZES.map(z => `<th>${z}</th>`).join("")}<th>Total</th></tr>
+      ${sum.map(r => `<tr><td>${r[0]}</td>${r.slice(1).map(n => `<td>${n}</td>`).join("")}</tr>`).join("")}
+      <tr><td><b>All</b></td>${tot.map(n => `<td><b>${n}</b></td>`).join("")}<td><b>${pieces}</b></td></tr></table></div>
+    <button id="dlSum" ${rows.length ? "" : "disabled"}>Download production summary (CSV)</button>
+    <button id="dlList" ${rows.length ? "" : "disabled"}>Download delivery list (CSV)</button>
+    <p class="muted" style="margin-top:10px">The summary has no customer details. The delivery list has names, phone numbers and addresses, so only send it to someone who delivers for you.</p></div>`;
+  $("incl").onchange = e => { incl = e.target.checked; renderMfr(); };
+  const stamp = new Date().toISOString().slice(0, 10), tag = incl ? "paid" : "confirmed";
+  $("dlSum").onclick = () => download(`aurel-production-summary-${tag}-${stamp}.csv`,
+    [["Colour", ...SIZES, "Total"], ...sum, ["All", ...tot, pieces]]);
+  $("dlList").onclick = () => download(`aurel-delivery-list-${tag}-${stamp}.csv`,
+    [["Ref", "Name", "Phone", "Address", "Colour", "Size", "Qty", "Status", "Ordered"],
+     ...[...rows].reverse().map(o => [o.ref, o.name, fmtPhone(o.phone), o.address, o.color, o.size, o.qty, LABEL[o.status], new Date(o.created_at).toLocaleDateString()])]);
+}
+
 function render() {
+  renderMfr();
   const live = orders.filter(o => o.status !== "cancelled");
   const paid = orders.filter(o => ["confirmed", "in_transit", "delivered"].includes(o.status));
   $("stats").innerHTML = `
